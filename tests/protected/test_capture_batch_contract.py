@@ -1,5 +1,6 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 
+from hypothesis import given, strategies as st
 from pydantic import TypeAdapter, ValidationError
 import pytest
 
@@ -115,6 +116,83 @@ def test_capture_batch_parses_both_states_through_the_public_contract() -> None:
     assert isinstance(capturing, CapturingBatch)
     assert isinstance(complete, CompleteBatch)
     assert complete.items[0].item_id == "item-1"
+
+
+def test_empty_bootstrap_batch_normalizes_timestamps_to_utc() -> None:
+    plus_two = timezone(timedelta(hours=2))
+
+    batch = CompleteBatch(
+        batch_id="batch-1",
+        run_id="run-1",
+        stream_id="stream-1",
+        cursor_before=TimeCursor(
+            after=datetime(2026, 7, 27, 11, 0, tzinfo=plus_two),
+        ),
+        cursor_after=MessageCursor(message_id=0),
+        captured_at=datetime(2026, 7, 27, 12, 0, tzinfo=plus_two),
+        items=(),
+    )
+
+    assert batch.cursor_before.after == datetime(
+        2026,
+        7,
+        27,
+        9,
+        0,
+        tzinfo=UTC,
+    )
+    assert batch.cursor_before.after.tzinfo is UTC
+    assert batch.captured_at == datetime(2026, 7, 27, 10, 0, tzinfo=UTC)
+    assert batch.captured_at.tzinfo is UTC
+    assert batch.cursor_after == MessageCursor(message_id=0)
+    assert batch.items == ()
+
+
+@given(
+    lower=st.integers(min_value=1),
+    upper_source=st.integers(min_value=0),
+)
+def test_capture_batch_rejects_every_reversed_message_cursor_range(
+    lower: int,
+    upper_source: int,
+) -> None:
+    upper = upper_source % lower
+
+    with pytest.raises(ValidationError):
+        CapturingBatch(
+            batch_id="batch-1",
+            run_id="run-1",
+            stream_id="stream-1",
+            cursor_before=MessageCursor(message_id=lower),
+            cursor_after=MessageCursor(message_id=upper),
+            captured_at=CAPTURED_AT,
+        )
+
+
+def test_capture_batch_rejects_invalid_temporal_boundaries() -> None:
+    with pytest.raises(ValidationError):
+        CapturingBatch(
+            batch_id="batch-1",
+            run_id="run-1",
+            stream_id="stream-1",
+            cursor_before=MessageCursor(message_id=10),
+            cursor_after=MessageCursor(message_id=20),
+            captured_at=datetime(2026, 7, 27, 12, 0),
+        )
+
+    with pytest.raises(ValidationError):
+        TimeCursor(after=datetime(2026, 7, 27, 11, 0))
+
+    for after in (CAPTURED_AT, CAPTURED_AT + timedelta(microseconds=1)):
+        with pytest.raises(ValidationError):
+            CapturingBatch(
+                batch_id="batch-1",
+                run_id="run-1",
+                stream_id="stream-1",
+                cursor_before=TimeCursor(after=after),
+                cursor_after=MessageCursor(message_id=20),
+                captured_at=CAPTURED_AT,
+            )
 
 
 def test_capture_batch_rejects_unknown_discriminators() -> None:

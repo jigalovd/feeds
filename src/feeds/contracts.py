@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated, Literal, Self
 
 from pydantic import (
@@ -114,6 +115,11 @@ class TimeCursor(ContractModel):
     kind: Literal["time"] = "time"
     after: AwareDatetime
 
+    @field_validator("after")
+    @classmethod
+    def normalize_after_to_utc(cls, value: datetime) -> datetime:
+        return value.astimezone(UTC)
+
 
 CursorBefore = Annotated[
     MessageCursor | TimeCursor,
@@ -129,6 +135,29 @@ class _BatchContract(ContractModel):
     cursor_before: CursorBefore
     cursor_after: MessageCursor
     captured_at: AwareDatetime
+
+    @field_validator("captured_at")
+    @classmethod
+    def normalize_captured_at_to_utc(cls, value: datetime) -> datetime:
+        return value.astimezone(UTC)
+
+    @model_validator(mode="after")
+    def require_ordered_cursor_bounds(self) -> Self:
+        if (
+            isinstance(self.cursor_before, TimeCursor)
+            and self.cursor_before.after >= self.captured_at
+        ):
+            raise ValueError(
+                "time cursor lower bound must precede capture time",
+            )
+        if (
+            isinstance(self.cursor_before, MessageCursor)
+            and self.cursor_after.message_id < self.cursor_before.message_id
+        ):
+            raise ValueError(
+                "message cursor upper bound must not precede lower bound",
+            )
+        return self
 
 
 class CapturingBatch(_BatchContract):
