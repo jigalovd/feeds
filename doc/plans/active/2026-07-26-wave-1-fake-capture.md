@@ -27,10 +27,12 @@
 
 ## Ограничения текущей стадии
 
-Созданы минимальный Python-каркас и публичные контракты `ContentItem` и `CaptureBatch`.
-Канонический implementation-профиль определён в карте документации и
-engineering workflow. Остальные package paths и test targets появляются
-только вместе с требующим их срезом и не предполагаются планом заранее.
+В `main` созданы минимальный Python-каркас и публичный контракт `ContentItem`.
+`CaptureBatch` реализован в candidate-ветке C02, но ещё не получил
+clean-context `PASS` и не интегрирован. Канонический implementation-профиль
+определён в карте документации и engineering workflow. Остальные package paths
+и test targets появляются только вместе с требующим их срезом и не
+предполагаются планом заранее.
 
 Отдельный scaffold без наблюдаемого публичного результата не образует срез.
 
@@ -48,7 +50,7 @@ clean-context verdict и попадает в `main` через squash merge.
 
 - [x] **C01: публичный `ContentItem`** `risk:high` `depends:[]` `mode:AFK`
   > После этого публичный контракт представляет один нормализованный элемент без Telegram SDK-типов.
-- [x] **C02: контракт `CaptureBatch`** `risk:medium` `depends:[C01]` `mode:AFK`
+- [ ] **C02: контракт `CaptureBatch`** `status:candidate` `risk:medium` `depends:[C01]` `mode:AFK`
   > После этого контракт отличает незавершённый batch от complete-входа и фиксирует границы cursor без его продвижения.
 - [ ] **C03: детерминированное fake-чтение** `risk:medium` `depends:[C02]` `mode:AFK`
   > После этого одинаковые границы чтения дают через fake один и тот же публичный `ContentItem`.

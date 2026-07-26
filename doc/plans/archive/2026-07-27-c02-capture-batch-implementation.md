@@ -14,6 +14,11 @@ Persistence, Telegram adapter и переход состояния в C02 не �
 
 **Tech Stack:** Python 3.14, Pydantic 2.x, pytest 9.x, Hypothesis 6.x, uv.
 
+**Статус исполнения:** реализация является кандидатом до независимого
+clean-context `PASS` и squash merge в `main`. Архивное расположение этого
+исторического плана само по себе не означает завершение C02. Пункт C02 в
+wave-плане остаётся `[ ]` до подтверждённой интеграции.
+
 ---
 
 ## Контракт среза
@@ -40,10 +45,11 @@ Documentation impact: статус реализации и активный пл
 - `README.md`, `AGENTS.md`, `doc/README.md`,
   `doc/engineering/development-workflow.md` — только фактический статус
   реализации после зелёного кода.
-- `doc/plans/active/2026-07-26-wave-1-fake-capture.md` — зафиксировать
-  кандидатное завершение C02 перед независимым verify.
-- Этот план после завершения переместить в `doc/plans/archive/` и обновить
-  `doc/plans/README.md`.
+- `doc/plans/active/2026-07-26-wave-1-fake-capture.md` — зафиксировать C02 как
+  незавершённый candidate перед независимым verify.
+- Перемещение implementation-плана в архив не закрывает C02. `[x]` в
+  wave-плане допустим только после clean-context `PASS` текущего head и
+  подтверждённого squash merge в `main`.
 
 ### Task 1: Публичные варианты и закрытые discriminators
 
@@ -610,11 +616,13 @@ Expected: импортов предметных модулей нет. Стра�
 
 В четырёх статусных документах заменить формулировку «реализован только
 `ContentItem`» на «реализованы публичные контракты `ContentItem` и
-`CaptureBatch`». В wave-плане отметить C02 `[x]`. Нормативные правила
-`contracts.md`, `state.md` и `telegram.md` не менять.
+`CaptureBatch`». В wave-плане оставить C02 незавершённым `[ ]` и добавить
+`status:candidate`: зелёная реализация в ветке ещё не является интеграцией.
+Нормативные правила `contracts.md`, `state.md` и `telegram.md` не менять.
 
-Переместить этот implementation-план в архив и заменить его ссылку в
-`doc/plans/README.md` из раздела «Активные» в «Архив».
+Не считать архивное расположение implementation-плана завершением C02 и не
+использовать перенос как pre-verify status gate. До clean-context `PASS` и
+squash merge статус определяется только как candidate.
 
 - [ ] **Step 4: выполнить документационные проверки**
 
@@ -634,9 +642,9 @@ git add AGENTS.md README.md doc
 git commit -m "Record CaptureBatch implementation status"
 ```
 
-Этот commit предшествует независимому verify и фиксирует кандидатное
-завершение C02. Статусные документы и отмеченный пункт wave-плана сами по себе
-не являются доказательством завершения.
+Этот commit предшествует независимому verify и фиксирует только candidate C02.
+Статусные документы и архивный implementation-план сами по себе не являются
+доказательством завершения.
 
 - [ ] **Step 6: получить независимый clean-context verdict**
 
@@ -682,3 +690,16 @@ PR содержит один публичный результат C02, факт
 clean-context verdict. Merge выполняется только после отдельного принятия
 пользователем. Если после verdict появляется новый content commit, перед
 merge обязателен новый clean-context verify.
+
+- [ ] **Step 8: интегрировать принятый срез**
+
+После явного принятия пользователем убедиться, что clean-context `PASS`
+относится к текущему head PR, и выполнить squash merge. Любой новый commit до
+merge отменяет прежний verdict.
+
+- [ ] **Step 9: отметить подтверждённую интеграцию**
+
+Только после появления squash commit C02 в `main` изменить пункт C02 в
+wave-плане с `[ ] status:candidate` на `[x]`. Если для этого требуется новый
+documentation commit, он проходит обычный pull request; архивное расположение
+implementation-плана не заменяет эту проверку фактической интеграции.

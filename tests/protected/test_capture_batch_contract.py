@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta, timezone
 
 from hypothesis import given, strategies as st
@@ -74,6 +75,63 @@ def _complete(
     )
 
 
+def _capturing_payload() -> dict[str, object]:
+    return {
+        "status": "capturing",
+        "batch_id": "batch-1",
+        "run_id": "run-1",
+        "stream_id": "stream-1",
+        "cursor_before": {
+            "kind": "message",
+            "message_id": 10,
+        },
+        "cursor_after": {
+            "kind": "message",
+            "message_id": 20,
+        },
+        "captured_at": CAPTURED_AT,
+    }
+
+
+def _complete_payload() -> dict[str, object]:
+    return {
+        "status": "complete",
+        "batch_id": "batch-1",
+        "run_id": "run-1",
+        "stream_id": "stream-1",
+        "cursor_before": {
+            "kind": "message",
+            "message_id": 10,
+        },
+        "cursor_after": {
+            "kind": "message",
+            "message_id": 20,
+        },
+        "captured_at": CAPTURED_AT,
+        "items": (
+            {
+                "item_id": "item-1",
+                "batch_id": "batch-1",
+                "stream_id": "stream-1",
+                "normalized_content": {
+                    "mode": "semantic_text",
+                    "semantic_text": "Вышла новая версия продукта.",
+                    "metadata": {
+                        "content_type": "text",
+                        "media_count": 0,
+                    },
+                },
+                "origin": {
+                    "username_snapshot": "source_channel",
+                    "title_snapshot": "Source Channel",
+                    "message_ids": (11,),
+                    "public_url": "https://t.me/source_channel/11",
+                },
+            },
+        ),
+    }
+
+
 def test_capture_batch_parses_both_states_through_the_public_contract() -> None:
     adapter = TypeAdapter(CaptureBatch)
 
@@ -116,6 +174,54 @@ def test_capture_batch_parses_both_states_through_the_public_contract() -> None:
     assert isinstance(capturing, CapturingBatch)
     assert isinstance(complete, CompleteBatch)
     assert complete.items[0].item_id == "item-1"
+
+
+@pytest.mark.parametrize(
+    "payload_factory",
+    (_capturing_payload, _complete_payload),
+    ids=("capturing", "complete"),
+)
+@pytest.mark.parametrize("field", ("batch_id", "run_id", "stream_id"))
+def test_capture_batch_rejects_empty_opaque_ids(
+    payload_factory: Callable[[], dict[str, object]],
+    field: str,
+) -> None:
+    payload = payload_factory()
+    if payload["status"] == "complete":
+        payload["items"] = ()
+    payload[field] = ""
+
+    with pytest.raises(ValidationError):
+        TypeAdapter(CaptureBatch).validate_python(payload)
+
+
+def test_complete_batch_rejects_payload_without_items() -> None:
+    payload = _complete_payload()
+    del payload["items"]
+
+    with pytest.raises(ValidationError):
+        TypeAdapter(CaptureBatch).validate_python(payload)
+
+
+def test_message_cursor_rejects_negative_message_id() -> None:
+    with pytest.raises(ValidationError):
+        MessageCursor.model_validate(
+            {
+                "kind": "message",
+                "message_id": -1,
+            },
+        )
+
+
+def test_capture_batch_rejects_time_cursor_as_upper_boundary() -> None:
+    payload = _capturing_payload()
+    payload["cursor_after"] = {
+        "kind": "time",
+        "after": datetime(2026, 7, 26, 12, 0, tzinfo=UTC),
+    }
+
+    with pytest.raises(ValidationError):
+        TypeAdapter(CaptureBatch).validate_python(payload)
 
 
 @pytest.mark.parametrize(
