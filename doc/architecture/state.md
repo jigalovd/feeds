@@ -26,18 +26,66 @@ problems
 ### `CaptureBatch`
 
 ```text
-batch_id
-run_id
-stream_id
-status: capturing | complete
-cursor_before
-cursor_after
-captured_at
+MessageCursor
+  kind: message
+  message_id
+
+TimeCursor
+  kind: time
+  after
+
+CapturingBatch
+  status: capturing
+  batch_id
+  run_id
+  stream_id
+  cursor_before: MessageCursor | TimeCursor
+  cursor_after: MessageCursor
+  captured_at
+
+CompleteBatch
+  status: complete
+  batch_id
+  run_id
+  stream_id
+  cursor_before: MessageCursor | TimeCursor
+  cursor_after: MessageCursor
+  captured_at
+  items: ContentItem[]
 ```
 
-Запись `capturing` с нижней и верхней границами создаётся до чтения. Неполный batch после сбоя не используется как частичный вход. Только `complete` предоставляет элементы синтезу.
+`captured_at` — timezone-aware UTC-момент открытия batch и фиксации верхней
+границы. Обычная нижняя граница содержит неотрицательный message cursor.
+Значение `0` является sentinel отсутствия Telegram-сообщений на
+зафиксированной границе, а не Telegram message ID. Bootstrap использует
+исключительную временную границу `TimeCursor.after`, которая строго
+предшествует `captured_at`. Верхняя граница всегда является
+`MessageCursor`.
+
+Запись `capturing` с нижней и верхней границами создаётся до чтения. Её
+публичное значение не содержит элементов. Неполный batch после сбоя не
+используется как частичный вход. Только `complete` предоставляет
+неизменяемую последовательность элементов синтезу; пустой complete batch
+допустим.
+
+Публичный `CaptureBatch` является закрытым union неизменяемых
+`CapturingBatch` и `CompleteBatch`. Завершение создаёт новое публичное
+значение с теми же идентификаторами, границами и `captured_at`. Хранилище
+может реализовать этот переход атомарным обновлением строк; публичный DTO не
+делает физическую схему частью контракта.
 
 Элементы `capturing` batch невидимы выборке синтеза. При восстановлении `monitoring` повторяет чтение по тем же границам и атомарно заменяет частичные строки полным результатом; если повтор невозможен, частичные строки удаляются, а источник фиксируется заново отдельным batch.
+
+Для message-based диапазона `cursor_after >= cursor_before`; равенство
+соответствует пустому диапазону. Message IDs complete-элементов находятся
+строго после message-based нижней границы и не выше верхней. При bootstrap
+числовая проверка применяется только к верхней границе. Наборы message IDs
+разных элементов не пересекаются. Верхняя граница `0` требует пустого
+complete batch.
+
+Все элементы complete batch имеют его `batch_id` и `stream_id`, а их
+`item_id` уникальны. Элементы сохраняют порядок capture без дополнительной
+сортировки.
 
 ### `ContentItem`
 

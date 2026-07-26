@@ -103,6 +103,71 @@ credentials и строится по первому message ID.
 Упорядоченные коллекции представлены immutable-последовательностями.
 Изменение значения создаёт новый DTO, а не модифицирует существующий.
 
+`CaptureBatch` является закрытым discriminated union по полю `status`:
+
+```text
+MessageCursor
+  kind: message
+  message_id
+
+TimeCursor
+  kind: time
+  after
+
+CursorBefore = MessageCursor | TimeCursor
+
+CapturingBatch
+  status: capturing
+  batch_id
+  run_id
+  stream_id
+  cursor_before: CursorBefore
+  cursor_after: MessageCursor
+  captured_at
+
+CompleteBatch
+  status: complete
+  batch_id
+  run_id
+  stream_id
+  cursor_before: CursorBefore
+  cursor_after: MessageCursor
+  captured_at
+  items: ContentItem[]
+```
+
+Оба варианта и cursor value objects являются строгими неизменяемыми
+значениями с закрытым набором полей. `batch_id`, `run_id` и `stream_id` —
+непустые непрозрачные строки. `MessageCursor.message_id` — неотрицательное
+целое число; `0` является sentinel отсутствия сообщений на зафиксированной
+границе и не является Telegram message ID. `captured_at` обозначает момент
+открытия batch и фиксации верхней границы, а `TimeCursor.after` —
+исключительную временную нижнюю границу bootstrap. Оба timestamp являются
+timezone-aware значениями, нормализованными в UTC; `TimeCursor.after` строго
+предшествует `captured_at`.
+
+`CapturingBatch` не имеет поля `items` и не является входом следующей фазы.
+Только `CompleteBatch` предоставляет immutable-последовательность `items`;
+пустой complete batch допустим. Завершение создаёт новое публичное значение
+`CompleteBatch` с той же идентичностью и границами, а не изменяет
+`CapturingBatch` на месте. Это правило публичного DTO не задаёт физический
+способ атомарного обновления долговечного состояния.
+
+Если обе cursor-границы основаны на message ID, верхняя граница не меньше
+нижней. Равенство допустимо для пустого диапазона. Все Telegram message IDs
+элементов строго больше message-based нижней границы и не превышают верхнюю.
+При временной нижней границе контракт проверяет только числовую верхнюю
+границу. Message IDs разных элементов не пересекаются.
+При `cursor_after.message_id == 0` complete batch не содержит элементов.
+
+Каждый элемент `CompleteBatch` имеет совпадающие с batch значения `batch_id`
+и `stream_id`; `item_id` внутри batch уникальны. Порядок элементов сохраняется
+как результат capture и дополнительно не пересортировывается.
+
+`CapturingBatch`, `CompleteBatch`, `MessageCursor` и `TimeCursor` являются
+вариантами и вложенными value objects одного верхнеуровневого DTO
+`CaptureBatch`, а не дополнительными переходными API.
+
 `Source.stream_id` — стабильный прикладной идентификатор информационного потока. Платформенные `peer_id`, `access_hash` и SDK-объекты остаются внутри `monitoring` и не становятся публичными селекторами.
 
 `DeliveryPlan` — публичный неизменяемый агрегат, который `delivery` строит целиком, а `operations` сохраняет до первой отправки. Он фиксирует `delivery_target` и упорядоченные units и messages, необходимые для детерминированного повтора. Связь плана с входными batches является приватным долговечным фактом `operations`, а не частью DTO `delivery`.
