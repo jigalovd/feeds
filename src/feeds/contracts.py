@@ -168,6 +168,46 @@ class CompleteBatch(_BatchContract):
     status: Literal["complete"] = "complete"
     items: tuple[ContentItem, ...]
 
+    @model_validator(mode="after")
+    def require_valid_complete_batch_items(self) -> Self:
+        if self.cursor_after.message_id == 0 and self.items:
+            raise ValueError(
+                "upper cursor zero requires an empty complete batch",
+            )
+        lower_message_id = (
+            self.cursor_before.message_id
+            if isinstance(self.cursor_before, MessageCursor)
+            else None
+        )
+        item_ids: set[str] = set()
+        origin_message_ids: set[int] = set()
+        for item in self.items:
+            if item.batch_id != self.batch_id:
+                raise ValueError("item batch ID must match complete batch")
+            if item.stream_id != self.stream_id:
+                raise ValueError("item stream ID must match complete batch")
+            if item.item_id in item_ids:
+                raise ValueError("item IDs must be unique within complete batch")
+            item_ids.add(item.item_id)
+            for message_id in item.origin.message_ids:
+                if (
+                    lower_message_id is not None
+                    and message_id <= lower_message_id
+                ):
+                    raise ValueError(
+                        "item message IDs must follow the lower cursor",
+                    )
+                if message_id > self.cursor_after.message_id:
+                    raise ValueError(
+                        "item message IDs must not exceed the upper cursor",
+                    )
+                if message_id in origin_message_ids:
+                    raise ValueError(
+                        "message IDs must not overlap between batch items",
+                    )
+                origin_message_ids.add(message_id)
+        return self
+
 
 CaptureBatch = Annotated[
     CapturingBatch | CompleteBatch,

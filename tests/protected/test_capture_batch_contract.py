@@ -118,6 +118,106 @@ def test_capture_batch_parses_both_states_through_the_public_contract() -> None:
     assert complete.items[0].item_id == "item-1"
 
 
+@pytest.mark.parametrize(
+    "item",
+    (
+        _item(batch_id="batch-2"),
+        _item(stream_id="stream-2"),
+    ),
+)
+def test_complete_batch_rejects_item_with_mismatched_membership(
+    item: ContentItem,
+) -> None:
+    with pytest.raises(ValidationError):
+        _complete(items=(item,))
+
+
+def test_complete_batch_rejects_duplicate_item_id() -> None:
+    items = (
+        _item(item_id="duplicate-item", message_ids=(11,)),
+        _item(item_id="duplicate-item", message_ids=(12,)),
+    )
+
+    with pytest.raises(ValidationError):
+        _complete(items=items)
+
+
+@pytest.mark.parametrize("message_ids", ((9, 11), (10, 11)))
+def test_complete_batch_rejects_message_id_not_after_message_cursor_before(
+    message_ids: tuple[int, ...],
+) -> None:
+    with pytest.raises(ValidationError):
+        _complete(items=(_item(message_ids=message_ids),))
+
+
+@pytest.mark.parametrize(
+    "cursor_before",
+    (
+        MessageCursor(message_id=10),
+        TimeCursor(after=datetime(2026, 7, 26, 12, 0, tzinfo=UTC)),
+    ),
+)
+def test_complete_batch_rejects_message_id_after_upper_cursor(
+    cursor_before: MessageCursor | TimeCursor,
+) -> None:
+    with pytest.raises(ValidationError):
+        CompleteBatch(
+            batch_id="batch-1",
+            run_id="run-1",
+            stream_id="stream-1",
+            cursor_before=cursor_before,
+            cursor_after=MessageCursor(message_id=20),
+            captured_at=CAPTURED_AT,
+            items=(_item(message_ids=(11, 21)),),
+        )
+
+
+def test_upper_cursor_is_inclusive() -> None:
+    batch = _complete(items=(_item(message_ids=(20,)),))
+
+    assert batch.items[0].origin.message_ids == (20,)
+
+
+def test_complete_batch_rejects_items_when_upper_cursor_is_zero() -> None:
+    with pytest.raises(
+        ValidationError,
+        match="upper cursor zero requires an empty complete batch",
+    ):
+        CompleteBatch(
+            batch_id="batch-1",
+            run_id="run-1",
+            stream_id="stream-1",
+            cursor_before=TimeCursor(
+                after=datetime(2026, 7, 26, 12, 0, tzinfo=UTC),
+            ),
+            cursor_after=MessageCursor(message_id=0),
+            captured_at=CAPTURED_AT,
+            items=(_item(message_ids=(1,)),),
+        )
+
+
+def test_complete_batch_rejects_overlapping_message_ids_between_items() -> None:
+    items = (
+        _item(item_id="item-1", message_ids=(11, 12)),
+        _item(item_id="item-2", message_ids=(12, 13)),
+    )
+
+    with pytest.raises(ValidationError):
+        _complete(items=items)
+
+
+def test_complete_batch_preserves_capture_order() -> None:
+    items = (
+        _item(item_id="item-z", message_ids=(19,)),
+        _item(item_id="item-a", message_ids=(11,)),
+        _item(item_id="item-m", message_ids=(15,)),
+    )
+
+    batch = _complete(items=items)
+
+    assert batch.items == items
+
+
 def test_empty_bootstrap_batch_normalizes_timestamps_to_utc() -> None:
     plus_two = timezone(timedelta(hours=2))
 
