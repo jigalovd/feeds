@@ -1,6 +1,8 @@
+from datetime import datetime
 from typing import Annotated, Literal, Self
 
 from pydantic import (
+    AwareDatetime,
     AnyHttpUrl,
     BaseModel,
     ConfigDict,
@@ -102,3 +104,44 @@ class ContentItem(ContractModel):
     stream_id: OpaqueId
     normalized_content: NormalizedContent
     origin: OriginReference
+
+
+class MessageCursor(ContractModel):
+    kind: Literal["message"] = "message"
+    message_id: NonNegativeInt
+
+
+class TimeCursor(ContractModel):
+    kind: Literal["time"] = "time"
+    after: AwareDatetime
+
+
+CursorBefore = Annotated[
+    MessageCursor | TimeCursor,
+    Field(discriminator="kind"),
+]
+
+
+class _BatchContract(ContractModel):
+    status: str
+    batch_id: OpaqueId
+    run_id: OpaqueId
+    stream_id: OpaqueId
+    cursor_before: CursorBefore
+    cursor_after: MessageCursor
+    captured_at: AwareDatetime
+
+
+class CapturingBatch(_BatchContract):
+    status: Literal["capturing"] = "capturing"
+
+
+class CompleteBatch(_BatchContract):
+    status: Literal["complete"] = "complete"
+    items: tuple[ContentItem, ...]
+
+
+CaptureBatch = Annotated[
+    CapturingBatch | CompleteBatch,
+    Field(discriminator="status"),
+]
