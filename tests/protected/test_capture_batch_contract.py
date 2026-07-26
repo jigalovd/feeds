@@ -159,6 +159,50 @@ def test_capture_batch_rejects_unknown_discriminators() -> None:
         )
 
 
+def test_capture_batch_rejects_payload_without_status() -> None:
+    adapter = TypeAdapter(CaptureBatch)
+
+    with pytest.raises(ValidationError):
+        adapter.validate_python(
+            {
+                "batch_id": "batch-1",
+                "run_id": "run-1",
+                "stream_id": "stream-1",
+                "cursor_before": {
+                    "kind": "message",
+                    "message_id": 10,
+                },
+                "cursor_after": {
+                    "kind": "message",
+                    "message_id": 20,
+                },
+                "captured_at": CAPTURED_AT,
+            },
+        )
+
+
+def test_capture_batch_rejects_cursor_before_without_kind() -> None:
+    adapter = TypeAdapter(CaptureBatch)
+
+    with pytest.raises(ValidationError):
+        adapter.validate_python(
+            {
+                "status": "capturing",
+                "batch_id": "batch-1",
+                "run_id": "run-1",
+                "stream_id": "stream-1",
+                "cursor_before": {
+                    "message_id": 10,
+                },
+                "cursor_after": {
+                    "kind": "message",
+                    "message_id": 20,
+                },
+                "captured_at": CAPTURED_AT,
+            },
+        )
+
+
 def test_capturing_batch_exposes_only_the_normative_fields() -> None:
     assert tuple(CapturingBatch.model_fields) == (
         "status",
