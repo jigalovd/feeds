@@ -10,6 +10,7 @@
 
 ## Архив
 
+- [C02: реализация CaptureBatch](archive/2026-07-27-c02-capture-batch-implementation.md)
 - [Maintain Why Comments Agent Skill](archive/2026-07-25-maintain-why-comments-agent-skill.md)
 - [AI-first миграция документации](archive/2026-07-25-ai-first-documentation-migration.md)
 
