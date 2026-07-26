@@ -14,10 +14,9 @@ Persistence, Telegram adapter и переход состояния в C02 не �
 
 **Tech Stack:** Python 3.14, Pydantic 2.x, pytest 9.x, Hypothesis 6.x, uv.
 
-**Статус исполнения:** реализация является кандидатом до независимого
-clean-context `PASS` и squash merge в `main`. Архивное расположение этого
-исторического плана само по себе не означает завершение C02. Пункт C02 в
-wave-плане остаётся `[ ]` до подтверждённой интеграции.
+**Статус исполнения:** завершено. Реализационный head PR #6 прошёл независимый
+clean-context verify и интегрирован в `main` squash-коммитом `8b20c8a`. Пункт
+C02 в wave-плане отмечен `[x]`.
 
 ---
 
@@ -57,7 +56,7 @@ Documentation impact: статус реализации и активный пл
 - Modify: `src/feeds/contracts.py`
 - Create: `tests/protected/test_capture_batch_contract.py`
 
-- [ ] **Step 1: создать protected-тест с публичными happy paths и запрещённой формой**
+- [x] **Step 1: создать protected-тест с публичными happy paths и запрещённой формой**
 
 ```python
 from datetime import UTC, datetime
@@ -190,7 +189,7 @@ def test_batch_values_and_items_are_immutable() -> None:
         )
 ```
 
-- [ ] **Step 2: выполнить исходный RED**
+- [x] **Step 2: выполнить исходный RED**
 
 Run:
 
@@ -201,7 +200,7 @@ uv run pytest tests/protected/test_capture_batch_contract.py -q
 Expected: collection `ERROR` с `ImportError` для отсутствующих публичных типов
 batch.
 
-- [ ] **Step 3: добавить минимальные модели без cross-field validators**
+- [x] **Step 3: добавить минимальные модели без cross-field validators**
 
 В `src/feeds/contracts.py` добавить импорт:
 
@@ -254,7 +253,7 @@ CaptureBatch = Annotated[
 ]
 ```
 
-- [ ] **Step 4: подтвердить GREEN базовой публичной формы**
+- [x] **Step 4: подтвердить GREEN базовой публичной формы**
 
 Run:
 
@@ -264,7 +263,7 @@ uv run pytest tests/protected/test_capture_batch_contract.py -q
 
 Expected: все тесты Task 1 проходят.
 
-- [ ] **Step 5: зафиксировать первый TDD-инкремент**
+- [x] **Step 5: зафиксировать первый TDD-инкремент**
 
 ```console
 git add src/feeds/contracts.py tests/protected/test_capture_batch_contract.py
@@ -277,7 +276,7 @@ git commit -m "Add CaptureBatch public variants"
 - Modify: `src/feeds/contracts.py`
 - Modify: `tests/protected/test_capture_batch_contract.py`
 
-- [ ] **Step 1: добавить failing-примеры времени и диапазонов**
+- [x] **Step 1: добавить failing-примеры времени и диапазонов**
 
 ```python
 from datetime import timedelta, timezone
@@ -356,7 +355,7 @@ def test_rejects_every_reversed_message_range(
         )
 ```
 
-- [ ] **Step 2: подтвердить RED на отсутствующей нормализации и проверках**
+- [x] **Step 2: подтвердить RED на отсутствующей нормализации и проверках**
 
 Run:
 
@@ -367,7 +366,7 @@ uv run pytest tests/protected/test_capture_batch_contract.py -q
 Expected: FAIL у UTC-нормализации, временного порядка или обратного числового
 диапазона; naive datetime уже может отклоняться типом Pydantic.
 
-- [ ] **Step 3: реализовать UTC и общий validator batch**
+- [x] **Step 3: реализовать UTC и общий validator batch**
 
 Изменить импорт времени:
 
@@ -405,7 +404,7 @@ from datetime import UTC, datetime
         return self
 ```
 
-- [ ] **Step 4: подтвердить GREEN и отсутствие регрессии C01**
+- [x] **Step 4: подтвердить GREEN и отсутствие регрессии C01**
 
 Run:
 
@@ -415,7 +414,7 @@ uv run pytest tests/protected/test_capture_batch_contract.py tests/protected/tes
 
 Expected: оба protected-файла проходят.
 
-- [ ] **Step 5: зафиксировать cursor-инварианты**
+- [x] **Step 5: зафиксировать cursor-инварианты**
 
 ```console
 git add src/feeds/contracts.py tests/protected/test_capture_batch_contract.py
@@ -428,7 +427,7 @@ git commit -m "Validate CaptureBatch cursor boundaries"
 - Modify: `src/feeds/contracts.py`
 - Modify: `tests/protected/test_capture_batch_contract.py`
 
-- [ ] **Step 1: добавить контрпримеры membership и диапазона**
+- [x] **Step 1: добавить контрпримеры membership и диапазона**
 
 ```python
 @pytest.mark.parametrize(
@@ -490,7 +489,7 @@ def test_empty_complete_batch_is_valid() -> None:
     assert _complete(items=()).items == ()
 ```
 
-- [ ] **Step 2: подтвердить RED на неконсистентных элементах**
+- [x] **Step 2: подтвердить RED на неконсистентных элементах**
 
 Run:
 
@@ -501,7 +500,7 @@ uv run pytest tests/protected/test_capture_batch_contract.py -q
 Expected: контрпримеры с чужой принадлежностью, повторениями и выходом за
 границы ошибочно принимаются до validator.
 
-- [ ] **Step 3: реализовать единый validator `CompleteBatch`**
+- [x] **Step 3: реализовать единый validator `CompleteBatch`**
 
 Добавить в `CompleteBatch`:
 
@@ -543,7 +542,7 @@ Expected: контрпримеры с чужой принадлежностью,
         return self
 ```
 
-- [ ] **Step 4: подтвердить GREEN полного protected oracle C02**
+- [x] **Step 4: подтвердить GREEN полного protected oracle C02**
 
 Run:
 
@@ -553,7 +552,7 @@ uv run pytest tests/protected/test_capture_batch_contract.py -q
 
 Expected: все happy paths, properties и контрпримеры проходят.
 
-- [ ] **Step 5: проверить силу oracle целевой мутацией**
+- [x] **Step 5: проверить силу oracle целевой мутацией**
 
 Временно заменить проверку верхней границы
 `message_id > self.cursor_after.message_id` на
@@ -567,7 +566,7 @@ Expected: хотя бы happy path с элементом на включител
 должен упасть. После доказанного FAIL вернуть нормативное условие `>` и
 повторить тест до GREEN.
 
-- [ ] **Step 6: зафиксировать membership-инварианты**
+- [x] **Step 6: зафиксировать membership-инварианты**
 
 ```console
 git add src/feeds/contracts.py tests/protected/test_capture_batch_contract.py
@@ -586,7 +585,7 @@ git commit -m "Enforce complete batch membership"
   to `doc/plans/archive/2026-07-27-c02-capture-batch-implementation.md`
 - Modify: `doc/plans/README.md`
 
-- [ ] **Step 1: выполнить полный implementation-профиль до изменения статусов**
+- [x] **Step 1: выполнить полный implementation-профиль до изменения статусов**
 
 ```console
 uv sync --locked --group dev
@@ -599,7 +598,7 @@ Expected: все тесты проходят; `src/feeds/contracts.py` имее�
 branch coverage либо каждый непокрытый участок получает отдельный
 обоснованный тест до продолжения.
 
-- [ ] **Step 2: проверить Why-комментарии и архитектурную границу**
+- [x] **Step 2: проверить Why-комментарии и архитектурную границу**
 
 Запустить:
 
@@ -612,7 +611,7 @@ Expected: импортов предметных модулей нет. Стра�
 дублируются комментариями; локальный Why-комментарий добавляется только если
 без него остаётся реальная refactor-ловушка.
 
-- [ ] **Step 3: синхронизировать только фактический статус**
+- [x] **Step 3: синхронизировать только фактический статус**
 
 В четырёх статусных документах заменить формулировку «реализован только
 `ContentItem`» на «реализованы публичные контракты `ContentItem` и
@@ -624,7 +623,7 @@ Expected: импортов предметных модулей нет. Стра�
 использовать перенос как pre-verify status gate. До clean-context `PASS` и
 squash merge статус определяется только как candidate.
 
-- [ ] **Step 4: выполнить документационные проверки**
+- [x] **Step 4: выполнить документационные проверки**
 
 ```console
 python tools/check_docs.py
@@ -635,7 +634,7 @@ git diff --check
 Expected: `DOCS_CHECK=PASS`, `CHECK_DOCS_TESTS=PASS`, у `git diff --check`
 нет вывода.
 
-- [ ] **Step 5: зафиксировать статусный кандидат**
+- [x] **Step 5: зафиксировать статусный кандидат**
 
 ```console
 git add AGENTS.md README.md doc
@@ -646,7 +645,7 @@ git commit -m "Record CaptureBatch implementation status"
 Статусные документы и архивный implementation-план сами по себе не являются
 доказательством завершения.
 
-- [ ] **Step 6: получить независимый clean-context verdict**
+- [x] **Step 6: получить независимый clean-context verdict**
 
 Verifier получает только:
 
@@ -680,7 +679,7 @@ Verdict: PASS
 
 Любой новый commit после `PASS` требует нового clean-context verify.
 
-- [ ] **Step 7: открыть draft PR без merge**
+- [x] **Step 7: открыть draft PR без merge**
 
 ```console
 git push -u origin codex/c02-capture-batch
@@ -691,13 +690,13 @@ clean-context verdict. Merge выполняется только после от
 пользователем. Если после verdict появляется новый content commit, перед
 merge обязателен новый clean-context verify.
 
-- [ ] **Step 8: интегрировать принятый срез**
+- [x] **Step 8: интегрировать принятый срез**
 
 После явного принятия пользователем убедиться, что clean-context `PASS`
 относится к текущему head PR, и выполнить squash merge. Любой новый commit до
 merge отменяет прежний verdict.
 
-- [ ] **Step 9: отметить подтверждённую интеграцию**
+- [x] **Step 9: отметить подтверждённую интеграцию**
 
 Только после появления squash commit C02 в `main` изменить пункт C02 в
 wave-плане с `[ ] status:candidate` на `[x]` и синхронно заменить весь абзац
