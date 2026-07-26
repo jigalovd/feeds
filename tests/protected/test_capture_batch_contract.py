@@ -76,12 +76,87 @@ def _complete(
 def test_capture_batch_parses_both_states_through_the_public_contract() -> None:
     adapter = TypeAdapter(CaptureBatch)
 
-    capturing = adapter.validate_python(_capturing().model_dump())
-    complete = adapter.validate_python(_complete().model_dump())
+    capturing = adapter.validate_python(
+        {
+            "status": "capturing",
+            "batch_id": "batch-1",
+            "run_id": "run-1",
+            "stream_id": "stream-1",
+            "cursor_before": {
+                "kind": "message",
+                "message_id": 10,
+            },
+            "cursor_after": {
+                "kind": "message",
+                "message_id": 20,
+            },
+            "captured_at": CAPTURED_AT,
+        },
+    )
+    complete = adapter.validate_python(
+        {
+            "status": "complete",
+            "batch_id": "batch-1",
+            "run_id": "run-1",
+            "stream_id": "stream-1",
+            "cursor_before": {
+                "kind": "time",
+                "after": datetime(2026, 7, 26, 12, 0, tzinfo=UTC),
+            },
+            "cursor_after": {
+                "kind": "message",
+                "message_id": 20,
+            },
+            "captured_at": CAPTURED_AT,
+            "items": (_item().model_dump(),),
+        },
+    )
 
     assert isinstance(capturing, CapturingBatch)
     assert isinstance(complete, CompleteBatch)
     assert complete.items[0].item_id == "item-1"
+
+
+def test_capture_batch_rejects_unknown_discriminators() -> None:
+    adapter = TypeAdapter(CaptureBatch)
+
+    with pytest.raises(ValidationError):
+        adapter.validate_python(
+            {
+                "status": "unknown",
+                "batch_id": "batch-1",
+                "run_id": "run-1",
+                "stream_id": "stream-1",
+                "cursor_before": {
+                    "kind": "message",
+                    "message_id": 10,
+                },
+                "cursor_after": {
+                    "kind": "message",
+                    "message_id": 20,
+                },
+                "captured_at": CAPTURED_AT,
+            },
+        )
+
+    with pytest.raises(ValidationError):
+        adapter.validate_python(
+            {
+                "status": "capturing",
+                "batch_id": "batch-1",
+                "run_id": "run-1",
+                "stream_id": "stream-1",
+                "cursor_before": {
+                    "kind": "unknown",
+                    "message_id": 10,
+                },
+                "cursor_after": {
+                    "kind": "message",
+                    "message_id": 20,
+                },
+                "captured_at": CAPTURED_AT,
+            },
+        )
 
 
 def test_capturing_batch_exposes_only_the_normative_fields() -> None:
