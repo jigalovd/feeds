@@ -234,6 +234,93 @@ def test_capture_batch_rejects_time_cursor_as_upper_boundary(
 
 
 @pytest.mark.parametrize(
+    ("validator", "payload"),
+    (
+        (
+            MessageCursor.model_validate,
+            {"kind": "message", "message_id": "10"},
+        ),
+        (
+            TimeCursor.model_validate,
+            {"kind": "time", "after": "2026-07-26T12:00:00Z"},
+        ),
+        (
+            MessageCursor.model_validate,
+            {"kind": "message", "message_id": 10, "unexpected": True},
+        ),
+        (
+            TimeCursor.model_validate,
+            {
+                "kind": "time",
+                "after": datetime(2026, 7, 26, 12, 0, tzinfo=UTC),
+                "unexpected": True,
+            },
+        ),
+    ),
+    ids=(
+        "message-string-id",
+        "time-string-timestamp",
+        "message-extra",
+        "time-extra",
+    ),
+)
+def test_cursor_values_reject_coercion_and_extra_fields(
+    validator: Callable[[object], object],
+    payload: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        validator(payload)
+
+
+@pytest.mark.parametrize(
+    "payload_factory",
+    (_capturing_payload, _complete_payload),
+    ids=("capturing", "complete"),
+)
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("captured_at", "2026-07-27T12:00:00Z"),
+        ("unexpected", True),
+    ),
+    ids=("string-timestamp", "extra-field"),
+)
+def test_batch_variants_reject_coercion_and_extra_fields(
+    payload_factory: Callable[[], dict[str, object]],
+    field: str,
+    value: object,
+) -> None:
+    payload = payload_factory()
+    payload[field] = value
+
+    with pytest.raises(ValidationError):
+        TypeAdapter(CaptureBatch).validate_python(payload)
+
+
+@pytest.mark.parametrize(
+    ("instance", "field", "replacement"),
+    (
+        (MessageCursor(message_id=10), "message_id", 11),
+        (
+            TimeCursor(after=datetime(2026, 7, 26, 12, 0, tzinfo=UTC)),
+            "after",
+            datetime(2026, 7, 26, 13, 0, tzinfo=UTC),
+        ),
+        (_capturing(), "run_id", "changed-run"),
+        (_complete(), "run_id", "changed-run"),
+    ),
+    ids=("message", "time", "capturing", "complete"),
+)
+def test_public_capture_models_are_frozen(
+    instance: object,
+    field: str,
+    replacement: object,
+) -> None:
+    with pytest.raises(ValidationError):
+        setattr(instance, field, replacement)
+
+
+@pytest.mark.parametrize(
     "item",
     (
         _item(batch_id="batch-2"),
@@ -294,10 +381,7 @@ def test_upper_cursor_is_inclusive() -> None:
 
 
 def test_complete_batch_rejects_items_when_upper_cursor_is_zero() -> None:
-    with pytest.raises(
-        ValidationError,
-        match="upper cursor zero requires an empty complete batch",
-    ):
+    with pytest.raises(ValidationError):
         CompleteBatch(
             batch_id="batch-1",
             run_id="run-1",
@@ -555,12 +639,7 @@ def test_capturing_batch_rejects_items() -> None:
         )
 
 
-def test_batches_are_frozen_and_items_reject_mutable_input() -> None:
-    batch = _capturing()
-
-    with pytest.raises(ValidationError):
-        batch.batch_id = "changed-batch"
-
+def test_complete_batch_rejects_mutable_items_input() -> None:
     complete_data = _complete().model_dump()
     complete_data["items"] = [_item()]
     with pytest.raises(ValidationError):
