@@ -45,9 +45,56 @@ captured_at
 item_id
 batch_id
 stream_id
-normalized_content
-origin
+normalized_content:
+  SemanticTextContent:
+    mode: semantic_text
+    semantic_text
+    metadata: ContentMetadata
+  | MetadataOnlyContent:
+    mode: metadata_only
+    metadata: ContentMetadata
+  ContentMetadata:
+    content_type: text | link | poll | photo | video | audio | voice | document | album | other_media
+    media_count
+    links
+    forward_attribution?:
+      username_snapshot?
+      title_snapshot?
+origin:
+  username_snapshot
+  title_snapshot
+  message_ids
+  public_url
 ```
+
+`normalized_content` — закрытый discriminated union. Вариант
+`SemanticTextContent` всегда содержит семантический текст, а вариант
+`MetadataOnlyContent` не содержит текстового поля. Поэтому отсутствие текста
+является выбранным режимом обработки, а не nullable-состоянием.
+
+`OriginReference` не содержит платформенный `peer_id`. Стабильную прикладную
+идентичность источника задаёт `ContentItem.stream_id`, а платформенное
+сопоставление остаётся приватным фактом `monitoring`.
+
+Сохраняемый `normalized_content` не содержит произвольного словаря metadata
+или платформенного payload. Его варианты сохраняют только поля закрытой
+публичной схемы; добавление поля выполняется как изменение публичного
+контракта и схемы состояния.
+
+`media_count` является неотрицательным целым числом. `links` содержит только
+HTTP(S) URL. Необязательный `forward_attribution` содержит хотя бы один снимок
+username или названия и не содержит платформенную идентичность пересылки.
+
+`item_id`, `batch_id` и `stream_id` сохраняются как непустые непрозрачные
+строки. Их внутренний способ построения не становится частью публичного
+контракта. `OriginReference.message_ids` хранит положительные уникальные
+Telegram message IDs в возрастающем порядке; снимки username и названия
+непусты, а `public_url` является канонической HTTPS-ссылкой без credentials.
+
+`ContentItem` и все вложенные value objects неизменяемы после создания.
+Упорядоченные коллекции сохраняются как immutable-последовательности.
+Коррекция нормализованного значения создаёт новый объект до фиксации complete
+batch и не изменяет уже сохранённый элемент на месте.
 
 Принадлежность элемента к незакрытому batch определяет необходимость обработки. Отдельные per-item состояния доставки, подтверждения или переноса не нужны.
 

@@ -68,11 +68,30 @@ clean-context verdict и попадает в `main` через squash merge.
 
 Публичный контракт позволяет создать и прочитать `ContentItem` с нормативными
 полями `item_id`, `batch_id`, `stream_id`, `normalized_content` и `origin`.
-Telegram SDK-типы не входят в этот контракт.
+`normalized_content` различает `SemanticTextContent` и
+`MetadataOnlyContent` через закрытый discriminated union. `origin` содержит
+снимки username и названия, message IDs и публичную ссылку. Telegram
+`peer_id`, `access_hash` и SDK-типы не входят в этот контракт.
 
 **Oracle**
 
 - набор и смысл публичных полей соответствуют владельцу состояния;
+- `SemanticTextContent` обязательно содержит семантический текст, а
+  `MetadataOnlyContent` не имеет текстового поля;
+- оба варианта содержат закрытый `ContentMetadata` с типом элемента,
+  неотрицательным количеством медиа, HTTP(S)-ссылками и необязательной
+  безопасной атрибуцией пересылки;
+- `ContentItem.stream_id` задаёт прикладную идентичность источника без
+  публичного `peer_id`;
+- `item_id`, `batch_id` и `stream_id` являются непустыми непрозрачными
+  строками без обещанного разбираемого формата;
+- `OriginReference` содержит непустые снимки username и названия,
+  положительные уникальные возрастающие message IDs и каноническую
+  HTTPS-ссылку без credentials;
+- `ContentItem`, его вложенные value objects и упорядоченные коллекции
+  неизменяемы после создания;
+- `normalized_content` не принимает произвольные mappings, `Any`, namespaced
+  facts или платформенные payload;
 - DTO доступен через публичную границу, а не внутренности реализации;
 - контракт не вводит дополнительные переходные DTO или платформенные типы.
 
