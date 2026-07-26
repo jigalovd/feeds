@@ -31,6 +31,15 @@ NORMATIVE_METADATA = (
     "Читать когда",
     "Связанные документы",
 )
+IGNORED_DIRECTORY_NAMES = frozenset(
+    {
+        ".git",
+        ".idea",
+        ".pytest_cache",
+        ".venv",
+        "__pycache__",
+    }
+)
 
 
 @dataclass(frozen=True, order=True)
@@ -50,6 +59,13 @@ def relative_workspace_path(workspace: Path, path: Path) -> str:
         return full_path.relative_to(workspace).as_posix()
     except ValueError:
         return full_path.as_posix()
+
+
+def is_in_ignored_directory(workspace: Path, path: Path) -> bool:
+    relative_path = path.resolve().relative_to(workspace)
+    return any(
+        part in IGNORED_DIRECTORY_NAMES for part in relative_path.parts[:-1]
+    )
 
 
 def content_outside_fences(content: str) -> str:
@@ -180,7 +196,11 @@ def check_documentation(workspace: Path) -> tuple[list[Issue], int, int]:
         raise ValueError(f"Workspace does not exist: {workspace}")
 
     issues: list[Issue] = []
-    all_files = sorted(path for path in workspace.rglob("*") if path.is_file())
+    all_files = sorted(
+        path
+        for path in workspace.rglob("*")
+        if path.is_file() and not is_in_ignored_directory(workspace, path)
+    )
     markdown_files = [path for path in all_files if path.suffix == ".md"]
 
     for path in all_files:
