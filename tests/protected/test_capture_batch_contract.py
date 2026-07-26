@@ -213,8 +213,17 @@ def test_message_cursor_rejects_negative_message_id() -> None:
         )
 
 
-def test_capture_batch_rejects_time_cursor_as_upper_boundary() -> None:
-    payload = _capturing_payload()
+@pytest.mark.parametrize(
+    "payload_factory",
+    (_capturing_payload, _complete_payload),
+    ids=("capturing", "complete"),
+)
+def test_capture_batch_rejects_time_cursor_as_upper_boundary(
+    payload_factory: Callable[[], dict[str, object]],
+) -> None:
+    payload = payload_factory()
+    if payload["status"] == "complete":
+        payload["items"] = ()
     payload["cursor_after"] = {
         "kind": "time",
         "after": datetime(2026, 7, 26, 12, 0, tzinfo=UTC),
