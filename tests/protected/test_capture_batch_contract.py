@@ -148,6 +148,25 @@ def test_empty_bootstrap_batch_normalizes_timestamps_to_utc() -> None:
     assert batch.items == ()
 
 
+@pytest.mark.parametrize("message_id", (0, 10))
+def test_complete_batch_accepts_equal_message_cursor_boundaries(
+    message_id: int,
+) -> None:
+    batch = CompleteBatch(
+        batch_id="batch-1",
+        run_id="run-1",
+        stream_id="stream-1",
+        cursor_before=MessageCursor(message_id=message_id),
+        cursor_after=MessageCursor(message_id=message_id),
+        captured_at=CAPTURED_AT,
+        items=(),
+    )
+
+    assert batch.cursor_before == MessageCursor(message_id=message_id)
+    assert batch.cursor_after == MessageCursor(message_id=message_id)
+    assert batch.items == ()
+
+
 @given(
     lower=st.integers(min_value=1),
     upper_source=st.integers(min_value=0),
