@@ -40,8 +40,8 @@ Documentation impact: статус реализации и активный пл
 - `README.md`, `AGENTS.md`, `doc/README.md`,
   `doc/engineering/development-workflow.md` — только фактический статус
   реализации после зелёного кода.
-- `doc/plans/active/2026-07-26-wave-1-fake-capture.md` — отметить C02
-  завершённым только после clean-context `PASS`.
+- `doc/plans/active/2026-07-26-wave-1-fake-capture.md` — зафиксировать
+  кандидатное завершение C02 перед независимым verify.
 - Этот план после завершения переместить в `doc/plans/archive/` и обновить
   `doc/plans/README.md`.
 
@@ -627,7 +627,18 @@ git diff --check
 Expected: `DOCS_CHECK=PASS`, `CHECK_DOCS_TESTS=PASS`, у `git diff --check`
 нет вывода.
 
-- [ ] **Step 5: получить независимый clean-context verdict**
+- [ ] **Step 5: зафиксировать статусный кандидат**
+
+```console
+git add AGENTS.md README.md doc
+git commit -m "Record CaptureBatch implementation status"
+```
+
+Этот commit предшествует независимому verify и фиксирует кандидатное
+завершение C02. Статусные документы и отмеченный пункт wave-плана сами по себе
+не являются доказательством завершения.
+
+- [ ] **Step 6: получить независимый clean-context verdict**
 
 Verifier получает только:
 
@@ -661,13 +672,6 @@ Verdict: PASS
 
 Любой новый commit после `PASS` требует нового clean-context verify.
 
-- [ ] **Step 6: зафиксировать завершённый срез**
-
-```console
-git add AGENTS.md README.md doc src tests
-git commit -m "Complete the CaptureBatch contract"
-```
-
 - [ ] **Step 7: открыть draft PR без merge**
 
 ```console
@@ -676,4 +680,5 @@ git push -u origin codex/c02-capture-batch
 
 PR содержит один публичный результат C02, фактические команды и
 clean-context verdict. Merge выполняется только после отдельного принятия
-пользователем.
+пользователем. Если после verdict появляется новый content commit, перед
+merge обязателен новый clean-context verify.

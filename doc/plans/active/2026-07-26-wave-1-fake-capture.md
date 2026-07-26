@@ -48,7 +48,7 @@ clean-context verdict и попадает в `main` через squash merge.
 
 - [x] **C01: публичный `ContentItem`** `risk:high` `depends:[]` `mode:AFK`
   > После этого публичный контракт представляет один нормализованный элемент без Telegram SDK-типов.
-- [ ] **C02: контракт `CaptureBatch`** `risk:medium` `depends:[C01]` `mode:AFK`
+- [x] **C02: контракт `CaptureBatch`** `risk:medium` `depends:[C01]` `mode:AFK`
   > После этого контракт отличает незавершённый batch от complete-входа и фиксирует границы cursor без его продвижения.
 - [ ] **C03: детерминированное fake-чтение** `risk:medium` `depends:[C02]` `mode:AFK`
   > После этого одинаковые границы чтения дают через fake один и тот же публичный `ContentItem`.
