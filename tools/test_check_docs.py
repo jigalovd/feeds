@@ -137,12 +137,23 @@ def arrange_unfinished_marker(root: Path) -> None:
     )
 
 
+def arrange_generated_tooling_directory(root: Path) -> None:
+    write_utf8_file(
+        root / ".pytest_cache" / "README.md",
+        "# Generated pytest cache\n",
+    )
+
+
 def no_changes(_: Path) -> None:
     return
 
 
 def main() -> int:
     assert_pass("valid-workspace", no_changes)
+    assert_pass(
+        "generated-tooling-directory",
+        arrange_generated_tooling_directory,
+    )
     assert_failure("broken-link", "broken-link", arrange_broken_link)
     assert_failure("broken-anchor", "broken-anchor", arrange_broken_anchor)
     assert_failure(

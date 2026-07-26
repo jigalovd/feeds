@@ -1,0 +1,41 @@
+[project]
+name = "feeds"
+version = "0.1.0"
+description = "Local Telegram news digest"
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "pydantic>=2,<3",
+]
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6,<7",
+    "import-linter>=2,<3",
+    "pytest>=9,<10",
+    "pytest-asyncio>=1,<2",
+    "pytest-cov>=7,<8",
+]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/feeds"]
+
+[tool.uv]
+required-version = ">=0.11.29"
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "--import-mode=importlib",
+]
+testpaths = ["tests"]
+asyncio_mode = "strict"
+markers = [
+    "protected: oracle derived from normative behavior",
+]
