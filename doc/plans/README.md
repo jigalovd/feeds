@@ -7,6 +7,7 @@
 ## Активные
 
 - [Волна 1: декомпозиция fake capture](active/2026-07-26-wave-1-fake-capture.md)
+- [C02: реализация CaptureBatch](active/2026-07-27-c02-capture-batch-implementation.md)
 
 ## Архив
 
